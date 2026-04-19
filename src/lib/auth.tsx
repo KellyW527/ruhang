@@ -2,13 +2,36 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { supabase } from "../integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
+type ProfilePreferences = {
+  preferred_name?: string | null;
+  feedback_style?: "strict" | "balanced" | "encouraging" | null;
+  reply_pacing?: "realistic" | "efficient" | null;
+  show_beginner_hints?: boolean | null;
+  show_starter_kit_guidance?: boolean | null;
+};
+
+type ProfileNotifications = {
+  notify_new_task?: boolean | null;
+  notify_leader_reply?: boolean | null;
+  notify_email?: boolean | null;
+  notify_badges?: boolean | null;
+  notify_browser?: boolean | null;
+};
+
 interface Profile {
   id: string;
   display_name?: string | null;
   name?: string | null;
   avatar_url?: string | null;
+  chinese_name?: string | null;
+  english_name?: string | null;
+  school?: string | null;
+  major?: string | null;
+  grade?: string | null;
   track?: string | null;
   plan?: string | null;
+  preferences?: ProfilePreferences | null;
+  notifications?: ProfileNotifications | null;
 }
 
 interface AuthContextType {
@@ -17,6 +40,7 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -25,6 +49,7 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   loading: true,
   signOut: async () => {},
+  refreshProfile: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -39,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .select("*")
       .eq("id", userId)
       .single();
-    setProfile(data ?? null);
+    setProfile((data as Profile | null) ?? null);
   };
 
   useEffect(() => {
@@ -65,8 +90,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  const refreshProfile = async () => {
+    if (!user?.id) return;
+    await fetchProfile(user.id);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signOut }}>
+    <AuthContext.Provider value={{ user, session, profile, loading, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

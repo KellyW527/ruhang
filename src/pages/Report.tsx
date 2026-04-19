@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { getPreferredDisplayName } from "@/lib/settings";
 
 type RubricItem = { dim: string; score: number; max: number };
 
@@ -168,7 +169,7 @@ const Report = () => {
     return [...radarData].sort((a, b) => a.value - b.value)[0];
   }, [radarData]);
 
-  const name = profile?.name ?? "新同学";
+  const name = getPreferredDisplayName(profile ?? null, user?.email) ?? "新同学";
 
   if (loading) {
     return (

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { buildOfferSeed } from "@/data/seed-data";
 import { getSimulationRuntime } from "@/data/workspace-runtime";
+import { getPreferredDisplayName } from "@/lib/settings";
 
 type Sim = {
   id: string;
@@ -28,6 +29,7 @@ const OfferLetter = () => {
   const [accepting, setAccepting] = useState(false);
   const [exit, setExit] = useState(false);
   const runtime = getSimulationRuntime(sim?.code);
+  const preferredName = getPreferredDisplayName(profile ?? null, user?.email);
 
   useEffect(() => {
     document.title = "Offer Letter · 入行 RuHang";
@@ -87,7 +89,7 @@ const OfferLetter = () => {
         simulationCode: sim?.code ?? "",
         company: sim?.company ?? "项目团队",
         userEmail: user?.email ?? "",
-        userName: profile?.name,
+        userName: preferredName,
         firstTask: firstTask
           ? {
               orderIndex: firstTask.order_index,
@@ -205,7 +207,7 @@ const OfferLetter = () => {
                 </p>
 
                 <div className="mt-6 space-y-3 text-sm leading-relaxed text-slate-700 sm:mt-8 sm:space-y-4">
-                  <p>{profile?.name ?? "同学"} 同学：</p>
+                  <p>{preferredName ?? "同学"} 同学：</p>
                   <p>
                     您好。经过严格的简历筛选与多轮面试评估，我们非常高兴地通知您，您已被
                     <strong className="font-semibold text-slate-900">{sim.company}</strong>

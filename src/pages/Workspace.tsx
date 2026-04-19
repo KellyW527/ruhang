@@ -21,6 +21,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { toast } from "sonner";
 import { cn, formatDeadline } from "@/lib/utils";
 import { uploadFile } from "@/lib/upload";
+import { applyFeedbackStyleTemplate, getPreferredDisplayName, normalizePreferences } from "@/lib/settings";
 import { SelfEval, type SelfEvalValue } from "@/components/workspace/SelfEval";
 import { MarkdownContent } from "@/components/content/MarkdownContent";
 import { TypingIndicator } from "@/components/workspace/TypingIndicator";
@@ -104,6 +105,8 @@ const Workspace = () => {
   const composeBusy = composeSending || composeSentFlash || draftSaving;
   const isMobile = useIsMobile();
   const runtime = getSimulationRuntime(simCode);
+  const profilePreferences = normalizePreferences(profile?.preferences);
+  const preferredDisplayName = getPreferredDisplayName(profile ?? null, user?.email);
   const starterKitAssets = getStarterKitAssets(simCode);
   const phoneScript = getPhoneScript(simCode);
   const completedCount = Object.values(taskStatuses).filter((s) => s.status === "done").length;
@@ -117,9 +120,12 @@ const Workspace = () => {
   const feedbackReference = feedbackTask ? getTaskReferenceContent(simCode, feedbackTask.order_index) : null;
   const isReviewMode = feedbackStatus?.status === "done";
   const feedbackAnswerMarkdown = feedbackReference?.standardAnswer ?? feedbackTask?.standard_answer ?? "";
+  const feedbackBossCommentary = feedbackTask
+    ? applyFeedbackStyleTemplate(profilePreferences.feedback_style, feedbackTask.boss_commentary)
+    : "";
   const feedbackReviewMarkdown = feedbackTask
     ? feedbackStatus?.review_summary ??
-      `### 评分拆解\n| 维度 | 得分 |\n| --- | --- |\n${feedbackTask.scoring_rubric.map((item) => `| ${item.dim} | ${item.score} / ${item.max} |`).join("\n")}\n\n### 上级反馈\n${feedbackTask.boss_commentary}`
+      `### 评分拆解\n| 维度 | 得分 |\n| --- | --- |\n${feedbackTask.scoring_rubric.map((item) => `| ${item.dim} | ${item.score} / ${item.max} |`).join("\n")}\n\n### 上级反馈\n${feedbackBossCommentary}`
     : "";
   const feedbackAnalysisMarkdown = feedbackReference?.analysis ?? feedbackReviewMarkdown;
   const selfEvalReady =
@@ -140,7 +146,7 @@ const Workspace = () => {
           `完成时间：${completionAt ? new Date(completionAt).toLocaleString("zh-CN") : new Date().toLocaleString("zh-CN")}`,
           `平均得分：${completionAverageScore}`,
           "",
-          `致 ${profile?.name ?? "同学"}：`,
+          `致 ${preferredDisplayName}：`,
           runtime.leader.completionNote,
           "",
           `签发人：${runtime.leader.name} · ${runtime.leader.title}`,
@@ -694,6 +700,14 @@ const Workspace = () => {
       simulationCode: simCode,
       submission,
     });
+    const styledLeaderMessage = applyFeedbackStyleTemplate(
+      profilePreferences.feedback_style,
+      evaluation.leaderMessage,
+    );
+    const styledDetailMarkdown = applyFeedbackStyleTemplate(
+      profilePreferences.feedback_style,
+      evaluation.detailMarkdown,
+    );
 
     await supabase
       .from("user_task_progress")
@@ -704,7 +718,7 @@ const Workspace = () => {
         submitted_file_url: submission.fileUrl ?? null,
         submission_type: evaluation.submissionType,
         submission_quality: evaluation.quality,
-        review_summary: evaluation.detailMarkdown,
+        review_summary: styledDetailMarkdown,
         submitted_at: new Date().toISOString(),
       })
       .eq("user_simulation_id", usId)
@@ -715,7 +729,7 @@ const Workspace = () => {
       score: evaluation.score ?? undefined,
       submission_type: evaluation.submissionType,
       submission_quality: evaluation.quality,
-      review_summary: evaluation.detailMarkdown,
+      review_summary: styledDetailMarkdown,
     });
 
     setTypingConvId(leaderConversation?.id ?? null);
@@ -728,7 +742,7 @@ const Workspace = () => {
             conversation_id: leaderConversation.id,
             sender: "boss",
             message_type: "feedback",
-            content: evaluation.leaderMessage,
+            content: styledLeaderMessage,
             task_id: activeTaskNow.id,
           },
           { markUnread: leaderConversation.id !== activeConvId },
@@ -819,7 +833,10 @@ const Workspace = () => {
             messages: history,
             simulation_title: simTitle,
             current_task: activeTask ? { title: activeTask.title, brief: activeTask.brief } : null,
-            user_name: profile?.name || user?.email?.split("@")[0] || "新人",
+            user_name: preferredDisplayName || "新人",
+            preferred_name: profilePreferences.preferred_name || preferredDisplayName,
+            feedback_style: profilePreferences.feedback_style,
+            reply_pacing: profilePreferences.reply_pacing,
             leader_name: runtime.leader.name,
             leader_role: runtime.leader.title,
             leader_tone: runtime.leader.tonePrompt,
@@ -956,7 +973,7 @@ const Workspace = () => {
       return;
     }
     setComposeSending(true);
-    const fromName = profile?.name || user.email?.split("@")[0] || "我";
+    const fromName = preferredDisplayName || user.email?.split("@")[0] || "我";
     const fromEmail = user.email || "me@ruhang.app";
     const ccArr = composeCc
       .split(/[,，\s]+/)
@@ -1011,7 +1028,7 @@ const Workspace = () => {
       return;
     }
     setDraftSaving(true);
-    const fromName = profile?.name || user.email?.split("@")[0] || "我";
+    const fromName = preferredDisplayName || user.email?.split("@")[0] || "我";
     const fromEmail = user.email || "me@ruhang.app";
     await supabase.from("emails").insert({
       user_simulation_id: usId,

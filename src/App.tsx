@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import OfferLetter from "./pages/OfferLetter";
 import Workspace from "./pages/Workspace";
 import Report from "./pages/Report";
+import Settings from "./pages/Settings";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import { supabasePublicConfig } from "./integrations/supabase/client";
@@ -76,6 +77,7 @@ function AppRoutes() {
         <Route path="/simulation/:id/offer" element={<ProtectedRoute><OfferLetter /></ProtectedRoute>} />
         <Route path="/simulation/:id" element={<ProtectedRoute><Workspace /></ProtectedRoute>} />
         <Route path="/report" element={<ProtectedRoute><Report /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <Toaster richColors position="top-center" />
