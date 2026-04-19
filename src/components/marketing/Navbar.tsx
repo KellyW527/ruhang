@@ -1,6 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -46,17 +45,26 @@ export function Navbar() {
         </nav>
         <div className="flex items-center gap-2">
           {session ? (
-            <Button asChild size="sm" className="bg-gradient-gold text-primary-foreground hover:opacity-95">
-              <Link to="/dashboard">进入控制台</Link>
-            </Button>
+            <Link
+              to="/dashboard"
+              className="inline-flex h-9 items-center justify-center rounded-lg bg-gradient-gold px-4 text-sm font-medium text-primary-foreground shadow-glow-gold transition hover:opacity-95"
+            >
+              进入控制台
+            </Link>
           ) : (
             <>
-              <Button asChild variant="ghost" size="sm" className="hover:bg-white/5">
-                <Link to="/login">登录</Link>
-              </Button>
-              <Button asChild size="sm" className="bg-gradient-gold text-primary-foreground hover:opacity-95">
-                <Link to="/register">注册</Link>
-              </Button>
+              <Link
+                to="/login"
+                className="inline-flex h-9 items-center justify-center rounded-lg px-4 text-sm text-foreground transition hover:bg-white/5"
+              >
+                登录
+              </Link>
+              <Link
+                to="/register"
+                className="inline-flex h-9 items-center justify-center rounded-lg bg-gradient-gold px-4 text-sm font-medium text-primary-foreground shadow-glow-gold transition hover:opacity-95"
+              >
+                注册
+              </Link>
             </>
           )}
         </div>
