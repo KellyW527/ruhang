@@ -1,73 +1,44 @@
-# React + TypeScript + Vite
+# 入行 RuHang
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+`codex_clean` 是当前唯一正式开发基线。
 
-Currently, two official plugins are available:
+## 正式基线
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- 本地目录：`/Users/wangyiping/Desktop/codex_clean`
+- GitHub：`KellyW527/RuHang-Clean`
+- Vercel：`ru-hang-clean`
 
-## React Compiler
+## 前端环境变量
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+正式前端变量只保留这两个：
 
-## Expanding the ESLint configuration
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+为了兼容旧环境，代码仍然支持：
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- `VITE_SUPABASE_ANON_KEY`
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+但它只作为过渡 fallback，不应继续作为正式标准。
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## 本地启动
+
+```bash
+npm install
+cp .env.example .env
+npm run build
+npm run test
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 空白页排查
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+如果部署后看到“只有背景、没有任何文字”，优先检查：
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+1. Vercel 是否配置了：
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_PUBLISHABLE_KEY`
+2. 修改环境变量后是否重新触发了 redeploy
+3. 是否把 `VITE_SUPABASE_URL` 写错成了 `https://https://...`
+
+当前代码在 Supabase 配置缺失时会显示明确错误页，而不是继续空白。

@@ -5,7 +5,7 @@ import { ArrowLeft, Send, Paperclip, Image as ImageIcon, Mail, MessageCircle, Ch
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, supabasePublicConfig } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -805,11 +805,15 @@ const Workspace = () => {
           role: m.sender === "user" ? "user" : "assistant",
           content: m.content,
         }));
-        const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/boss-reply`, {
+        if (!supabasePublicConfig.ok || !supabasePublicConfig.url || !supabasePublicConfig.key) {
+          throw new Error("Supabase public config missing");
+        }
+
+        const resp = await fetch(`${supabasePublicConfig.url}/functions/v1/boss-reply`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            Authorization: `Bearer ${supabasePublicConfig.key}`,
           },
           body: JSON.stringify({
             messages: history,
