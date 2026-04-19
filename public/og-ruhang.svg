@@ -1,0 +1,30 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="105" y1="60" x2="1063" y2="572" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F1D36"/>
+      <stop offset="1" stop-color="#08111F"/>
+    </linearGradient>
+    <radialGradient id="haloGold" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(238 127) rotate(26.7669) scale(365.235 216.153)">
+      <stop stop-color="#C9A84C" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#C9A84C" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="haloBlue" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(984 153) rotate(150.934) scale(398.056 221.046)">
+      <stop stop-color="#3B82F6" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#3B82F6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="131" y1="140" x2="1071" y2="484" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F0DB9A"/>
+      <stop offset="0.55" stop-color="#C9A84C"/>
+      <stop offset="1" stop-color="#8B6A20"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" rx="40" fill="url(#bg)"/>
+  <rect width="1200" height="630" rx="40" fill="url(#haloGold)"/>
+  <rect width="1200" height="630" rx="40" fill="url(#haloBlue)"/>
+  <rect x="78" y="82" width="1044" height="466" rx="28" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)"/>
+  <text x="132" y="180" fill="#C9A84C" font-family="Inter, Arial, sans-serif" font-size="24" letter-spacing="7">IMMERSIVE FINANCE CAREER LAB</text>
+  <text x="132" y="286" fill="white" font-family="Georgia, serif" font-size="78" font-weight="700">入行 RuHang</text>
+  <text x="132" y="370" fill="url(#gold)" font-family="Georgia, serif" font-size="54" font-weight="700">把第一段金融经历，先在系统里做真。</text>
+  <text x="132" y="445" fill="#B8C3D6" font-family="Inter, Arial, sans-serif" font-size="28">卖方投行 · PE / VC 投资 · 二级行研</text>
+  <text x="132" y="495" fill="#90A0B9" font-family="Inter, Arial, sans-serif" font-size="22">Offer、项目组、领导反馈、任务提交、勋章与 completion 全链路沉浸式训练</text>
+</svg>
