@@ -69,25 +69,30 @@
     --sidebar-ring: 43 53% 54%;
   }
   * {
-    @apply border-border outline-ring/50;
+    border-color: hsl(var(--border));
+    outline-color: hsl(var(--ring) / 0.5);
   }
   body {
-    @apply bg-background text-foreground;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
   }
   html {
-    @apply font-sans;
+    font-family: 'Geist Variable', sans-serif;
   }
 }
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
   html, body, #root {
-    @apply min-h-screen;
+    min-height: 100vh;
   }
   body {
-    @apply bg-background text-foreground antialiased;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     font-family: 'Inter', 'PingFang SC', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
     background: var(--gradient-navy);
   }
@@ -139,60 +144,124 @@
   .halo-blue { background: var(--gradient-radial-blue); }
 
   .prose-ruhang {
-    @apply text-[15px] leading-7 text-foreground/90 md:text-sm;
+    font-size: 15px;
+    line-height: 1.75rem;
+    color: hsl(var(--foreground) / 0.9);
+  }
+  @media (min-width: 768px) {
+    .prose-ruhang {
+      font-size: 0.875rem;
+    }
   }
   .prose-ruhang :where(h1, h2, h3) {
-    @apply font-display text-foreground;
+    font-family: 'Noto Serif SC', 'PingFang SC', serif;
+    color: hsl(var(--foreground));
     position: relative;
   }
   .prose-ruhang :where(h1) {
-    @apply mb-4 mt-2 text-2xl;
+    margin-top: 0.5rem;
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+    line-height: 2rem;
   }
   .prose-ruhang :where(h2) {
-    @apply mb-3 mt-6 border-b border-primary/30 pb-2 text-xl;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid hsl(var(--primary) / 0.3);
+    font-size: 1.25rem;
+    line-height: 1.75rem;
   }
   .prose-ruhang :where(h3) {
-    @apply mb-2 mt-4 text-lg;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    font-size: 1.125rem;
+    line-height: 1.75rem;
   }
   .prose-ruhang :where(p) {
-    @apply text-[15px] leading-7 text-foreground/90 md:text-sm;
+    font-size: 15px;
+    line-height: 1.75rem;
+    color: hsl(var(--foreground) / 0.9);
+  }
+  @media (min-width: 768px) {
+    .prose-ruhang :where(p) {
+      font-size: 0.875rem;
+    }
   }
   .prose-ruhang :where(ul, ol) {
-    @apply my-4 space-y-2 pl-5;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+    padding-left: 1.25rem;
   }
   .prose-ruhang :where(li) {
-    @apply text-foreground/90;
+    color: hsl(var(--foreground) / 0.9);
+    margin-top: 0.5rem;
   }
   .prose-ruhang :where(ul > li)::marker,
   .prose-ruhang :where(ol > li)::marker {
     color: hsl(var(--primary));
   }
   .prose-ruhang :where(blockquote) {
-    @apply my-5 rounded-r-xl border-l-2 border-primary bg-primary/5 px-4 py-3 text-foreground/85;
+    margin-top: 1.25rem;
+    margin-bottom: 1.25rem;
+    padding: 0.75rem 1rem;
+    border-left: 2px solid hsl(var(--primary));
+    border-top-right-radius: 0.75rem;
+    border-bottom-right-radius: 0.75rem;
+    background: hsl(var(--primary) / 0.05);
+    color: hsl(var(--foreground) / 0.85);
   }
   .prose-ruhang :where(code):not(:where(pre code)) {
-    @apply rounded bg-[hsl(var(--surface-2))] px-1.5 py-0.5 font-mono text-[13px] text-[hsl(var(--primary-glow))];
+    display: inline-block;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.375rem;
+    background: hsl(var(--surface-2));
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: hsl(var(--primary-glow));
   }
   .prose-ruhang :where(pre) {
-    @apply overflow-x-auto rounded-xl border border-white/10 bg-[hsl(var(--surface-2))] p-4;
+    overflow-x: auto;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid hsl(0 0% 100% / 0.1);
+    background: hsl(var(--surface-2));
   }
   .prose-ruhang :where(pre code) {
-    @apply bg-transparent p-0 text-[13px] leading-6 text-foreground/90;
+    background: transparent;
+    padding: 0;
+    font-size: 13px;
+    line-height: 1.5rem;
+    color: hsl(var(--foreground) / 0.9);
   }
   .prose-ruhang :where(a) {
-    @apply text-primary underline decoration-primary/50 underline-offset-4 transition hover:text-[hsl(var(--primary-glow))];
+    color: hsl(var(--primary));
+    text-decoration: underline;
+    text-decoration-color: hsl(var(--primary) / 0.5);
+    text-underline-offset: 4px;
+    transition: color 160ms ease;
+  }
+  .prose-ruhang :where(a):hover {
+    color: hsl(var(--primary-glow));
   }
   .prose-ruhang :where(table) {
-    @apply min-w-full border-collapse text-left text-[13px];
+    min-width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 13px;
   }
   .prose-ruhang :where(thead th) {
-    @apply bg-[hsl(var(--surface-2))] px-3 py-2 text-foreground;
+    padding: 0.5rem 0.75rem;
+    background: hsl(var(--surface-2));
+    color: hsl(var(--foreground));
   }
   .prose-ruhang :where(tbody td) {
-    @apply px-3 py-2 text-foreground/85;
+    padding: 0.5rem 0.75rem;
+    color: hsl(var(--foreground) / 0.85);
   }
   .prose-ruhang :where(th, td) {
-    @apply border border-white/5 align-top;
+    vertical-align: top;
+    border: 1px solid hsl(0 0% 100% / 0.05);
   }
 }
 
