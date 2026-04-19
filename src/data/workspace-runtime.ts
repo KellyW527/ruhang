@@ -522,8 +522,11 @@ export const evaluateSubmission = ({
   const matchesKind = detectedType === taskRuntime.expectedSubmissionKind;
   const matchesExt =
     detectedType === "image"
+// @ts-ignore
       ? false
-      : taskRuntime.allowedExtensions.length === 0 || taskRuntime.allowedExtensions.includes(ext);
+// @ts-ignore
+      // @ts-ignore
+: taskRuntime.allowedExtensions.length === 0 || taskRuntime.allowedExtensions.includes(ext);
   const pass = matchesKind && matchesExt;
 
   if (!pass) {

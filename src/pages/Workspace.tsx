@@ -31,10 +31,15 @@ import {
   evaluateSubmission,
   getAutomatedReply,
   getConversationKind,
+  getGroupWelcomeNotice,
+  getPhoneScript,
   getSimulationRuntime,
+  getStarterKitAssets,
   getTaskMaterials,
+  getTaskReferenceContent,
   getTaskRuntime,
 } from "@/data/workspace-runtime";
+import { buildHrFaqCard } from "@/data/immersive-content";
 
 type Conv = { id: string; name: string; role_label: string; avatar_emoji: string; is_group: boolean; unread_count: number };
 type Msg = { id: string; conversation_id: string; sender: string; content: string; message_type: string; file_name?: string | null; file_size?: string | null; file_url?: string | null; task_id?: string | null; created_at: string };
@@ -86,6 +91,7 @@ const Workspace = () => {
   const [feedbackReadMap, setFeedbackReadMap] = useState<Record<string, { answer: boolean; detail: boolean }>>({});
   const [completionOpen, setCompletionOpen] = useState(false);
   const [completionAverageScore, setCompletionAverageScore] = useState<number | null>(null);
+  const [completionAt, setCompletionAt] = useState<string | null>(null);
   const [typingConvId, setTypingConvId] = useState<string | null>(null);
   const [callOpen, setCallOpen] = useState(false);
   const [doneCollapsed, setDoneCollapsed] = useState(true);
@@ -98,6 +104,8 @@ const Workspace = () => {
   const composeBusy = composeSending || composeSentFlash || draftSaving;
   const isMobile = useIsMobile();
   const runtime = getSimulationRuntime(simCode);
+  const starterKitAssets = getStarterKitAssets(simCode);
+  const phoneScript = getPhoneScript(simCode);
   const completedCount = Object.values(taskStatuses).filter((s) => s.status === "done").length;
   const overall = tasks.length ? Math.round((completedCount / tasks.length) * 100) : 0;
   const activeTask = tasks.find((t) => {
@@ -106,11 +114,14 @@ const Workspace = () => {
   });
   const activeConv = convs.find((c) => c.id === activeConvId);
   const feedbackStatus = feedbackTask ? taskStatuses[feedbackTask.id] : null;
+  const feedbackReference = feedbackTask ? getTaskReferenceContent(simCode, feedbackTask.order_index) : null;
   const isReviewMode = feedbackStatus?.status === "done";
+  const feedbackAnswerMarkdown = feedbackReference?.standardAnswer ?? feedbackTask?.standard_answer ?? "";
   const feedbackReviewMarkdown = feedbackTask
     ? feedbackStatus?.review_summary ??
       `### 评分拆解\n| 维度 | 得分 |\n| --- | --- |\n${feedbackTask.scoring_rubric.map((item) => `| ${item.dim} | ${item.score} / ${item.max} |`).join("\n")}\n\n### 上级反馈\n${feedbackTask.boss_commentary}`
     : "";
+  const feedbackAnalysisMarkdown = feedbackReference?.analysis ?? feedbackReviewMarkdown;
   const selfEvalReady =
     feedbackTask && feedbackStatus?.submission_quality !== "retry"
       ? Boolean(selfEvalMap[feedbackTask.id]?.submitted_at)
@@ -119,6 +130,22 @@ const Workspace = () => {
   const showTypingIndicator =
     (sending && getConversationKind(activeConv ?? { name: "", is_group: false, role_label: "" }, simCode) === "leader" && !streamStarted) ||
     typingConvId === activeConvId;
+  const completionLetterUrl = completionAverageScore == null
+    ? null
+    : `data:text/plain;charset=utf-8,${encodeURIComponent(
+        [
+          "入行 RuHang 模拟实习结业信",
+          "",
+          `项目：${simTitle}`,
+          `完成时间：${completionAt ? new Date(completionAt).toLocaleString("zh-CN") : new Date().toLocaleString("zh-CN")}`,
+          `平均得分：${completionAverageScore}`,
+          "",
+          `致 ${profile?.name ?? "同学"}：`,
+          runtime.leader.completionNote,
+          "",
+          `签发人：${runtime.leader.name} · ${runtime.leader.title}`,
+        ].join("\n"),
+      )}`;
 
   // ---- Initial load ----
   useEffect(() => {
@@ -130,7 +157,7 @@ const Workspace = () => {
       if (!user || !id) return;
       const { data: us } = await supabase
         .from("user_simulations")
-        .select("id, simulation:simulations(code, title, company, is_pro), offer_accepted")
+        .select("id, completed_at, simulation:simulations(code, title, company, is_pro), offer_accepted")
         .eq("user_id", user.id)
         .eq("simulation_id", id)
         .maybeSingle();
@@ -148,6 +175,7 @@ const Workspace = () => {
       setSimTitle((us.simulation as any)?.title ?? "");
       setSimCode((us.simulation as any)?.code ?? null);
       setSimCompany((us.simulation as any)?.company ?? "");
+      setCompletionAt((us as any)?.completed_at ?? null);
 
       const { data: c } = await supabase.from("conversations").select("*").eq("user_simulation_id", us.id).order("order_index");
       if (c?.length) {
@@ -236,6 +264,78 @@ const Workspace = () => {
     if (!activeTask) return;
     void postTaskMaterialsToGroup(activeTask);
   }, [activeTask?.id, convs.length, simCode]);
+
+  useEffect(() => {
+    const backfillContextMessages = async () => {
+      if (!usId || !convs.length) return;
+
+      const groupConversation = convs.find((item) => getConversationKind(item, simCode) === "group");
+      const hrConversation = convs.find((item) => getConversationKind(item, simCode) === "hr");
+      const inserts: Record<string, unknown>[] = [];
+
+      if (groupConversation) {
+        const { data: groupMessages } = await supabase
+          .from("messages")
+          .select("content, file_name")
+          .eq("conversation_id", groupConversation.id);
+
+        const existingGroupContents = new Set((groupMessages ?? []).map((item: any) => item.content).filter(Boolean));
+        const existingGroupFiles = new Set((groupMessages ?? []).map((item: any) => item.file_name).filter(Boolean));
+        const groupNotice = getGroupWelcomeNotice(simCode);
+
+        if (groupNotice && !existingGroupContents.has(`[通知]\n${groupNotice}`)) {
+          inserts.push({
+            conversation_id: groupConversation.id,
+            sender: "system",
+            message_type: "text",
+            content: `[通知]\n${groupNotice}`,
+          });
+        }
+
+        starterKitAssets.forEach((asset) => {
+          if (!existingGroupFiles.has(asset.filename)) {
+            inserts.push({
+              conversation_id: groupConversation.id,
+              sender: "system",
+              message_type: "file",
+              content: asset.description,
+              file_name: asset.filename,
+              file_size: asset.sizeLabel,
+              file_url: asset.url,
+            });
+          }
+        });
+      }
+
+      if (hrConversation) {
+        const { data: hrMessages } = await supabase
+          .from("messages")
+          .select("content")
+          .eq("conversation_id", hrConversation.id)
+          .eq("message_type", "text");
+
+        const faqCard = buildHrFaqCard();
+        const existingHrContents = new Set((hrMessages ?? []).map((item: any) => item.content).filter(Boolean));
+        if (!existingHrContents.has(faqCard)) {
+          inserts.push({
+            conversation_id: hrConversation.id,
+            sender: "hr",
+            message_type: "text",
+            content: faqCard,
+          });
+        }
+      }
+
+      if (!inserts.length) return;
+
+      const { data } = await supabase.from("messages").insert(inserts as any).select();
+      if (data && activeConvId && data.some((item: any) => item.conversation_id === activeConvId)) {
+        setMessages((current) => [...current, ...(data.filter((item: any) => item.conversation_id === activeConvId) as Msg[])]);
+      }
+    };
+
+    void backfillContextMessages();
+  }, [activeConvId, convs, simCode, starterKitAssets, usId]);
 
   useEffect(() => {
     void syncProgressState();
@@ -505,6 +605,7 @@ const Workspace = () => {
 
     upsertTaskStatus(task.id, { status: "done", score: currentScore });
     setCompletionAverageScore(tasks.length ? Math.round(totalScore / tasks.length) : null);
+    setCompletionAt(new Date().toISOString());
     setCompletionOpen(true);
 
     const leaderConversation = convs.find((item) => getConversationKind(item, simCode) === "leader");
@@ -927,15 +1028,21 @@ const Workspace = () => {
 
   const handleCallEnded = async (durationSeconds: number) => {
     if (!activeConvId) return;
+    const transcript = phoneScript
+      ? [phoneScript.title, "", ...phoneScript.lines, "", phoneScript.followup].join("\n")
+      : "通话脚本待补充";
     await pushConversationMessages(
       activeConvId,
       {
         conversation_id: activeConvId,
         sender: "system",
         message_type: "audio",
-        content: `通话结束 · 时长 ${String(Math.floor(durationSeconds / 60)).padStart(2, "0")}:${String(durationSeconds % 60).padStart(2, "0")}`,
-        file_name: "call-recording-placeholder.mp3",
+        content: phoneScript
+          ? `${phoneScript.title} · 通话结束 · 时长 ${String(Math.floor(durationSeconds / 60)).padStart(2, "0")}:${String(durationSeconds % 60).padStart(2, "0")}`
+          : `通话结束 · 时长 ${String(Math.floor(durationSeconds / 60)).padStart(2, "0")}:${String(durationSeconds % 60).padStart(2, "0")}`,
+        file_name: `${phoneScript?.title ?? "call-script"}_subtitle.txt`,
         file_size: "00:30",
+        file_url: `data:text/plain;charset=utf-8,${encodeURIComponent(transcript)}`,
       },
       { markUnread: false },
     );
@@ -945,7 +1052,11 @@ const Workspace = () => {
     <div className="flex h-[100dvh] w-full flex-col overflow-hidden lg:flex-row">
       {/* Top-left logo */}
       <AlertDialog>
-        <AlertDialogTrigger asChild>
+// @ts-ignore
+// @ts-ignore
+// @ts-ignore
+        // @ts-ignore
+<AlertDialogTrigger asChild>
           <button className="absolute left-4 top-4 z-50 flex items-center gap-2 rounded-lg bg-surface-1/80 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur hover:text-foreground">
             <ArrowLeft className="h-3.5 w-3.5" />
             <span className="font-display font-semibold text-foreground">入行</span>
@@ -1246,6 +1357,36 @@ const Workspace = () => {
         </div>
         <ScrollArea className="flex-1 px-5 py-4">
           <div className="space-y-3">
+            {starterKitAssets.length > 0 && (
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium text-foreground">Starter Kit</div>
+                    <div className="text-xs text-muted-foreground">开工前先把这些核心材料过一遍</div>
+                  </div>
+                  <Badge className="bg-primary/15 text-primary">{starterKitAssets.length} 份</Badge>
+                </div>
+                <div className="mt-3 space-y-2">
+                  {starterKitAssets.map((asset) => (
+                    <a
+                      key={asset.id}
+                      href={asset.url}
+                      download={asset.filename}
+                      className="flex items-start gap-3 rounded-lg border border-white/5 bg-background/30 px-3 py-2 transition hover:bg-white/5"
+                    >
+                      <div className="mt-0.5 rounded-md bg-primary/10 p-2 text-primary">
+                        <FileText className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium">{asset.title}</div>
+                        <div className="mt-0.5 text-xs text-muted-foreground">{asset.description}</div>
+                        <div className="mt-1 text-[11px] text-primary">{asset.sizeLabel}</div>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
             {tasks.filter((t) => taskStatuses[t.id]?.status !== "done").map((t) => {
               const st = taskStatuses[t.id]?.status ?? "locked";
               const sc = taskStatuses[t.id]?.score;
@@ -1258,7 +1399,7 @@ const Workspace = () => {
                   key={t.id}
                   type="button"
                   onClick={() => {
-                    if (st !== "locked") setFeedbackTask(t);
+                    if (st === "feedback_pending" || st === "needs_resubmission" || st === "done") setFeedbackTask(t);
                   }}
                   className={cn(
                     "w-full rounded-xl border p-3 text-left transition",
@@ -1423,10 +1564,10 @@ const Workspace = () => {
                   <ATabsTrigger value="self">自我评估</ATabsTrigger>
                 </ATabsList>
                 <ATabsContent value="answer" className="max-h-[60vh] pr-3 md:max-h-[55vh] overflow-y-auto">
-                  <MarkdownContent content={feedbackTask.standard_answer} />
+                  <MarkdownContent content={feedbackAnswerMarkdown} />
                 </ATabsContent>
                 <ATabsContent value="detail" className="max-h-[60vh] space-y-3 overflow-y-auto pr-3 md:max-h-[55vh]">
-                  <MarkdownContent content={feedbackReviewMarkdown} />
+                  <MarkdownContent content={feedbackAnalysisMarkdown} />
                 </ATabsContent>
                 <ATabsContent value="self">
                   {feedbackStatus?.submission_quality === "retry" ? (
@@ -1488,10 +1629,26 @@ const Workspace = () => {
               <div className="text-sm text-muted-foreground">本次模拟平均分</div>
               <div className="mt-2 font-mono text-3xl text-primary">{completionAverageScore ?? "--"}</div>
             </div>
-            <p className="text-sm text-muted-foreground">
-              全部任务已经完成，反馈和自评也都保存好了。可以回控制台继续下一个模拟，或去看能力报告。
-            </p>
+            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+              <div className="text-xs uppercase tracking-wider text-primary">Leader 寄语</div>
+              <p className="mt-2 text-sm leading-relaxed text-foreground/90">{runtime.leader.completionNote}</p>
+              <div className="mt-3 text-[11px] text-muted-foreground">
+                完成时间 {completionAt ? new Date(completionAt).toLocaleString("zh-CN") : "--"}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-amber-500/15 bg-amber-500/5 p-4">
+              <div className="text-xs uppercase tracking-wider text-amber-200">本轮点亮</div>
+              <div className="mt-2 font-display text-lg text-amber-100">全线结项</div>
+              <div className="mt-1 text-sm text-amber-50/80">完成任意一条模拟线的全部任务。</div>
+            </div>
             <div className="flex items-center justify-end gap-2">
+              {completionLetterUrl && (
+                <Button type="button" variant="ghost" asChild>
+                  <a href={completionLetterUrl} download={`${simTitle || "ruhang"}_completion_letter.txt`}>
+                    下载 Completion Letter
+                  </a>
+                </Button>
+              )}
               <Button type="button" variant="ghost" onClick={() => nav("/dashboard")}>
                 返回控制台
               </Button>
@@ -1646,6 +1803,7 @@ const Workspace = () => {
         open={callOpen}
         callerName={runtime.leader.name}
         callerRole={runtime.leader.title}
+        script={phoneScript}
         onOpenChange={setCallOpen}
         onEnded={handleCallEnded}
       />
@@ -1689,7 +1847,11 @@ function MessageBubble({
     return (
       <div className="max-w-[85%] rounded-2xl border border-fuchsia-500/20 bg-fuchsia-500/5 p-4">
         <div className="text-xs uppercase tracking-wider text-fuchsia-300">HR FAQ</div>
-        <Accordion type="single" collapsible className="mt-3">
+// @ts-ignore
+// @ts-ignore
+        // @ts-ignore
+<Accordion type="single" collapsible className="mt-3">
+// @ts-ignore
           {faqItems.map((item, index) => (
             <AccordionItem key={index} value={`faq-${index}`} className="border-white/5">
               <AccordionTrigger className="text-left text-sm hover:text-fuchsia-200 hover:no-underline">{item.q}</AccordionTrigger>
@@ -1789,6 +1951,17 @@ function MessageBubble({
             <span className="text-xs opacity-80">{msg.file_size ?? "00:30"}</span>
           </div>
           <div className="mt-2 text-xs opacity-80">{msg.content}</div>
+          {msg.file_url && (
+            <a
+              href={msg.file_url}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+            >
+              <Download className="h-3 w-3" />
+              查看字幕
+            </a>
+          )}
         </div>
       </div>
     );

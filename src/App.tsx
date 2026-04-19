@@ -31,9 +31,9 @@ function AppRoutes() {
         <Route path="/register" element={<Register />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/offer/:track" element={<ProtectedRoute><OfferLetter /></ProtectedRoute>} />
-        <Route path="/workspace/:track" element={<ProtectedRoute><Workspace /></ProtectedRoute>} />
-        <Route path="/report/:track" element={<ProtectedRoute><Report /></ProtectedRoute>} />
+        <Route path="/simulation/:id/offer" element={<ProtectedRoute><OfferLetter /></ProtectedRoute>} />
+        <Route path="/simulation/:id" element={<ProtectedRoute><Workspace /></ProtectedRoute>} />
+        <Route path="/report" element={<ProtectedRoute><Report /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <Toaster richColors position="top-center" />

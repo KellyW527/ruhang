@@ -26,11 +26,10 @@ const rarityRank: Record<MedalDefinition["rarity"], number> = {
 
 export const buildAchievementStates = (rows: AchievementProgressRow[]) => {
   const doneRows = rows.filter((row) => row.status === "done");
-  const completedCodes = new Set(doneRows.map((row) => row.simulationCode));
+  const touchedCodes = new Set(doneRows.map((row) => row.simulationCode));
   const completedSimulations = new Set(
     rows.filter((row) => row.simulationStatus === "completed").map((row) => row.simulationCode),
   );
-  const acceptedCodes = new Set(rows.filter((row) => row.offerAccepted).map((row) => row.simulationCode));
   const validSubmissions = rows.filter((row) => row.submissionQuality === "pass" && row.submittedAt);
   const selfEvalCount = rows.filter((row) => row.selfEvalSubmitted).length;
 
@@ -93,28 +92,10 @@ export const buildAchievementStates = (rows: AchievementProgressRow[]) => {
               row.score >= 90,
           ),
         };
-      case "dd-worker":
-        return {
-          ...medal,
-          unlocked: rows.some(
-            (row) =>
-              /尽调/i.test(row.title) &&
-              row.status === "done" &&
-              typeof row.score === "number" &&
-              row.score >= 85,
-          ),
-          unlockedAt: findUnlockTime(
-            (row) =>
-              /尽调/i.test(row.title) &&
-              row.status === "done" &&
-              typeof row.score === "number" &&
-              row.score >= 85,
-          ),
-        };
       case "three-angles":
         return {
           ...medal,
-          unlocked: completedCodes.size >= 3,
+          unlocked: touchedCodes.size >= 3,
           unlockedAt: doneRows.at(-1)?.submittedAt,
         };
       case "self-aware":
@@ -128,24 +109,6 @@ export const buildAchievementStates = (rows: AchievementProgressRow[]) => {
           ...medal,
           unlocked: completedSimulations.size >= 1,
           unlockedAt: findUnlockTime((row) => row.simulationStatus === "completed"),
-        };
-      case "all-clear":
-        return {
-          ...medal,
-          unlocked: completedSimulations.size >= 3,
-          unlockedAt: doneRows.at(-1)?.submittedAt,
-        };
-      case "perfect":
-        return {
-          ...medal,
-          unlocked: rows.some((row) => row.score === 100),
-          unlockedAt: findUnlockTime((row) => row.score === 100),
-        };
-      case "tool-master":
-        return {
-          ...medal,
-          unlocked: acceptedCodes.size >= 3,
-          unlockedAt: findUnlockTime((row) => row.offerAccepted),
         };
       default:
         return { ...medal, unlocked: false };
